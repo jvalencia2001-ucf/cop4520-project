@@ -29,6 +29,60 @@ vector<vector<int>> matrix_sub(vector<vector<int>> matA, vector<vector<int>> mat
   return res;
 }
 
+vector<vector<int>> strassen_multiply(vector<vector<int>> A, vector<vector<int>> B) {
+  int n = A.size();
+  vector<vector<int>> C(n, vector<int>(n));
+
+  if (n == 1) {
+    C[0][0] = A[0][0] * B[0][0];
+    return C;
+  }
+
+  int m = n / 2;
+
+  vector<vector<int>> A11(m, vector<int>(m)), A12(m, vector<int>(m)), A21(m, vector<int>(m)), A22(m, vector<int>(m));
+  vector<vector<int>> B11(m, vector<int>(m)), B12(m, vector<int>(m)), B21(m, vector<int>(m)), B22(m, vector<int>(m));
+
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < m; j++) {
+      A11[i][j] = A[i][j];
+      A12[i][j] = A[i][j + m];
+      A21[i][j] = A[i + m][j];
+      A22[i][j] = A[i + m][j + m];
+
+      B11[i][j] = B[i][j];
+      B12[i][j] = B[i][j + m];
+      B21[i][j] = B[i + m][j];
+      B22[i][j] = B[i + m][j + m];
+    }
+  }
+
+  vector<vector<int>> M1 = strassen_multiply(A11, matrix_sub(B12, B22));
+  vector<vector<int>> M2 = strassen_multiply(matrix_add(A11, A12), B22);
+  vector<vector<int>> M3 = strassen_multiply(matrix_add(A21, A22), B11);
+  vector<vector<int>> M4 = strassen_multiply(A22, matrix_sub(B21, B11));
+  vector<vector<int>> M5 = strassen_multiply(matrix_add(A11, A22), matrix_add(B11, B22));
+  vector<vector<int>> M6 = strassen_multiply(matrix_sub(A12, A22), matrix_add(B21, B22));
+  vector<vector<int>> M7 = strassen_multiply(matrix_sub(A11, A21), matrix_add(B11, B12));
+
+  vector<vector<int>> C11 = matrix_add(matrix_sub(matrix_add(M5, M4), M2), M6);
+  vector<vector<int>> C12 = matrix_add(M1, M2);
+  vector<vector<int>> C21 = matrix_add(M3, M4);
+  vector<vector<int>> C22 = matrix_sub(matrix_sub(matrix_add(M5, M1), M3), M7);
+
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < m; j++) {
+      C[i][j] = C11[i][j];
+      C[i][j + m] = C12[i][j];
+      C[i + m][j] = C21[i][j];
+      C[i + m][j + m] = C22[i][j];
+    }
+  }
+
+  return C;
+}
+
+
 vector<vector<int>> dot_matrix_mult(vector<vector<int>>& matA, vector<vector<int>>& matB) {
     int rowA = matA.size();
     int colA = matA[0].size();
