@@ -3,6 +3,32 @@
 
 using namespace std;
 
+vector<vector<int>> matrix_add(vector<vector<int>> matA, vector<vector<int>> matB) {
+  
+  vector<vector<int>> res(matA.size(), vector<int>(matA.size()));
+  
+  for (int i = 0; i < matA.size(); i++) {
+    for (int j = 0; j < matA[0].size(); j++) {
+      res[i][j] = matA[i][j] + matB[i][j];
+    }
+  }
+
+  return res;
+}
+
+vector<vector<int>> matrix_sub(vector<vector<int>> matA, vector<vector<int>> matB) {
+  
+  vector<vector<int>> res(matA.size(), vector<int>(matA.size()));
+  
+  for (int i = 0; i < matA.size(); i++) {
+    for (int j = 0; j < matA[0].size(); j++) {
+      res[i][j] = matA[i][j] - matB[i][j];
+    }
+  }
+
+  return res;
+}
+
 vector<vector<int>> dot_matrix_mult(vector<vector<int>>& matA, vector<vector<int>>& matB) {
     int rowA = matA.size();
     int colA = matA[0].size();
