@@ -1,8 +1,21 @@
 #include <iostream> 
 #include <vector>
 #include <thread>
+#include <random>
+#include <chrono>
+
 
 using namespace std;
+
+#define TEST_MATRIX_SIZE 4
+
+int generate_random(int range_from, int range_to) {
+    std::random_device                  rand_dev;
+    std::mt19937                        generator(rand_dev());
+    std::uniform_int_distribution<int>  distr(range_from, range_to);
+
+    return distr(generator);
+}
 
 vector<vector<int>> matrix_add(vector<vector<int>> matA, vector<vector<int>> matB) {
   
@@ -28,6 +41,27 @@ vector<vector<int>> matrix_sub(vector<vector<int>> matA, vector<vector<int>> mat
   }
 
   return res;
+}
+
+vector<vector<int>> dot_matrix_mult(vector<vector<int>>& matA, vector<vector<int>>& matB) {
+    int rowA = matA.size();
+    int colA = matA[0].size();
+    int rowB = matB.size();
+    int colB = matB[0].size();
+    vector<vector<int>> result(rowA, vector<int>(colB, 0));
+
+    for(int i = 0; i < rowA; i++)
+    {
+        for(int j = 0; j < colB; j++)
+        {
+            for(int k = 0; k < colA; k++)
+            {
+                result[i][j] += matA[i][k] * matB[k][j];
+            }
+        }
+    }
+
+    return result;
 }
 
 vector<vector<int>> strassen_matrix_mult(vector<vector<int>> A, vector<vector<int>> B) {
@@ -83,30 +117,6 @@ vector<vector<int>> strassen_matrix_mult(vector<vector<int>> A, vector<vector<in
   return C;
 }
 
-
-vector<vector<int>> dot_matrix_mult(vector<vector<int>>& matA, vector<vector<int>>& matB) {
-    int rowA = matA.size();
-    int colA = matA[0].size();
-    int rowB = matB.size();
-    int colB = matB[0].size();
-
-    cout << rowA << " " << colA << " " << rowB << " " << colB << endl; 
-     vector<vector<int>> result(rowA, vector<int>(colB, 0));
-
-    for(int i = 0; i < rowA; i++)
-    {
-        for(int j = 0; j < colB; j++)
-        {
-            for(int k = 0; k < colA; k++)
-            {
-                result[i][j] += matA[i][k] * matB[k][j];
-            }
-        }
-    }
-
-    return result;
-}
-
 void mutlithread_matrix_mult_function(vector<vector<int>>& A, vector<vector<int>>& B, vector<vector<int>>& C, int row, int col, int n) {
     int result = 0;
     for (int i = 0; i < n; i++) {
@@ -137,21 +147,128 @@ vector<vector<int>> multithread_matrix_mult(vector<vector<int>>& A, vector<vecto
     return C;
 }
 
+void cputhread_matrix_mult_function(vector<vector<int>> A, vector<vector<int>> B, vector<vector<int>> &C, int rowStart, int rowEnd) {
+  int n = A[0].size();
+
+  for (int i = rowStart; i < rowEnd; i++) {
+    for (int j = 0; j < B[0].size(); j++) {
+      for (int k = 0; k < n; k++) {
+        C[i][j] += A[i][k] * B[k][j];
+      }
+    }
+  }
+}
+
+vector<vector<int>> cputhread_matrix_mult(vector<vector<int>> A,
+                                          vector<vector<int>> B) {
+  int m = A.size();
+  int p = B[0].size();
+
+  vector<vector<int>> C(m, vector<int>(p, 0));
+
+  int numThreads = thread::hardware_concurrency();
+  vector<thread> threads(numThreads);
+
+  int chunkSize = m / numThreads;
+  int rowStart = 0;
+
+  for (int i = 0; i < numThreads; i++) {
+    int rowEnd = (i == numThreads - 1) ? m : rowStart + chunkSize;
+    threads[i] =
+        thread(cputhread_matrix_mult_function, A, B, ref(C), rowStart, rowEnd);
+    rowStart = rowEnd;
+  }
+
+  for (auto& t : threads) {
+    t.join();
+  }
+
+  return C;
+}
 
 int main(){
-    vector<vector<int>> mA = {{1, 2, 3, 4},{5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
-    vector<vector<int>> mB = {{17, 18, 19, 20},{21, 22, 23, 24}, {25, 26, 27, 28}, {29, 30, 31, 32}};
-    vector<vector<int>> res = dot_matrix_mult(mA, mB);
+    
+    vector<vector<int>> mA(TEST_MATRIX_SIZE, vector<int>(TEST_MATRIX_SIZE));
+    vector<vector<int>> mB(TEST_MATRIX_SIZE, vector<int>(TEST_MATRIX_SIZE));
 
-    for(int i = 0; i < res.size(); i++)
+    for(int i = 0; i < TEST_MATRIX_SIZE; i++) {
+        for(int j = 0; j < TEST_MATRIX_SIZE; j++) {
+            mA[i][j] = generate_random(1, 10);
+            mB[i][j] = generate_random(1,10);
+        }
+    }
+
+    auto start1 = std::chrono::steady_clock::now();  
+    vector<vector<int>> res1 = dot_matrix_mult(mA, mB);
+    auto finish1 = std::chrono::steady_clock::now();
+    double elapsed_seconds1 = std::chrono::duration_cast<std::chrono::duration<double>>(finish1 - start1).count();
+
+    auto start2 = std::chrono::steady_clock::now();  
+    vector<vector<int>> res2 = strassen_matrix_mult(mA, mB);
+    auto finish2 = std::chrono::steady_clock::now();
+    double elapsed_seconds2 = std::chrono::duration_cast<std::chrono::duration<double>>(finish2 - start2).count();
+
+    auto start3 = std::chrono::steady_clock::now();  
+    vector<vector<int>> res3 = multithread_matrix_mult(mA, mB);
+    auto finish3 = std::chrono::steady_clock::now();
+    double elapsed_seconds3 = std::chrono::duration_cast<std::chrono::duration<double>>(finish3 - start3).count();
+
+    auto start4 = std::chrono::steady_clock::now();  
+    vector<vector<int>> res4 = cputhread_matrix_mult(mA, mB);
+    auto finish4 = std::chrono::steady_clock::now();
+    double elapsed_seconds4 = std::chrono::duration_cast<std::chrono::duration<double>>(finish4 - start4).count();
+
+    cout << "Dot product method: " << elapsed_seconds1 << " seconds." << endl;
+    for(int i = 0; i < res1.size(); i++)
     {
-        for(int j = 0; j < res[0].size(); j++)
+        for(int j = 0; j < res1[0].size(); j++)
         {
-            cout << res[i][j] << " ";
+            cout << res1[i][j] << " ";
         }
 
         cout << endl;
     }
+
+    cout << endl;
+
+    cout << "Strassen method: " << elapsed_seconds2 << " seconds." << endl;
+    for(int i = 0; i < res2.size(); i++)
+    {
+        for(int j = 0; j < res2[0].size(); j++)
+        {
+            cout << res2[i][j] << " ";
+        }
+
+        cout << endl;
+    }
+
+    cout << endl;
+
+    cout << "Multithreaded method: " << elapsed_seconds3 << " seconds." << endl;
+    for(int i = 0; i < res3.size(); i++)
+    {
+        for(int j = 0; j < res3[0].size(); j++)
+        {
+            cout << res3[i][j] << " ";
+        }
+
+        cout << endl;
+    }
+
+    cout << endl;
+
+    cout << "CPUthreaded method: " << elapsed_seconds4 << " seconds." << endl;
+    for(int i = 0; i < res4.size(); i++)
+    {
+        for(int j = 0; j < res4[0].size(); j++)
+        {
+            cout << res4[i][j] << " ";
+        }
+
+        cout << endl;
+    }
+
+    cout << endl;
 
     return 0;
 
