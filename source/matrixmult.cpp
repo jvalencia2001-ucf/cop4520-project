@@ -1,5 +1,6 @@
 #include <iostream> 
 #include <vector>
+#include <thread>
 
 using namespace std;
 
@@ -29,7 +30,7 @@ vector<vector<int>> matrix_sub(vector<vector<int>> matA, vector<vector<int>> mat
   return res;
 }
 
-vector<vector<int>> strassen_multiply(vector<vector<int>> A, vector<vector<int>> B) {
+vector<vector<int>> strassen_matrix_mult(vector<vector<int>> A, vector<vector<int>> B) {
   int n = A.size();
   vector<vector<int>> C(n, vector<int>(n));
 
@@ -57,13 +58,13 @@ vector<vector<int>> strassen_multiply(vector<vector<int>> A, vector<vector<int>>
     }
   }
 
-  vector<vector<int>> M1 = strassen_multiply(A11, matrix_sub(B12, B22));
-  vector<vector<int>> M2 = strassen_multiply(matrix_add(A11, A12), B22);
-  vector<vector<int>> M3 = strassen_multiply(matrix_add(A21, A22), B11);
-  vector<vector<int>> M4 = strassen_multiply(A22, matrix_sub(B21, B11));
-  vector<vector<int>> M5 = strassen_multiply(matrix_add(A11, A22), matrix_add(B11, B22));
-  vector<vector<int>> M6 = strassen_multiply(matrix_sub(A12, A22), matrix_add(B21, B22));
-  vector<vector<int>> M7 = strassen_multiply(matrix_sub(A11, A21), matrix_add(B11, B12));
+  vector<vector<int>> M1 = strassen_matrix_mult(A11, matrix_sub(B12, B22));
+  vector<vector<int>> M2 = strassen_matrix_mult(matrix_add(A11, A12), B22);
+  vector<vector<int>> M3 = strassen_matrix_mult(matrix_add(A21, A22), B11);
+  vector<vector<int>> M4 = strassen_matrix_mult(A22, matrix_sub(B21, B11));
+  vector<vector<int>> M5 = strassen_matrix_mult(matrix_add(A11, A22), matrix_add(B11, B22));
+  vector<vector<int>> M6 = strassen_matrix_mult(matrix_sub(A12, A22), matrix_add(B21, B22));
+  vector<vector<int>> M7 = strassen_matrix_mult(matrix_sub(A11, A21), matrix_add(B11, B12));
 
   vector<vector<int>> C11 = matrix_add(matrix_sub(matrix_add(M5, M4), M2), M6);
   vector<vector<int>> C12 = matrix_add(M1, M2);
@@ -106,6 +107,35 @@ vector<vector<int>> dot_matrix_mult(vector<vector<int>>& matA, vector<vector<int
     return result;
 }
 
+void mutlithread_matrix_mult_function(vector<vector<int>>& A, vector<vector<int>>& B, vector<vector<int>>& C, int row, int col, int n) {
+    int result = 0;
+    for (int i = 0; i < n; i++) {
+        result += A[row][i] * B[i][col];
+    }
+    C[row][col] = result;
+}
+
+vector<vector<int>> multithread_matrix_mult(vector<vector<int>>& A, vector<vector<int>>& B) {
+    int m = A.size();
+    int n = A[0].size();
+    int p = B[0].size();
+
+    vector<vector<int>> C(m, vector<int>(p));
+
+    vector<thread> threads;
+
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < p; j++) {
+            threads.emplace_back(mutlithread_matrix_mult_function, ref(A), ref(B), ref(C), i, j, n);
+        }
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    return C;
+}
 
 
 int main(){
